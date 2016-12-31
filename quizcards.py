@@ -124,15 +124,9 @@ class Card(object):
 
 
 class QuizCard(Card):
-    "Quiz cards using ReST input."
+    "Quiz card with a question and answer on two sides."
 
     def resize_images(self, story):
-        styleSheet = getSampleStyleSheet()
-        bt = styleSheet['BodyText']
-        bt.fontName = "Helvetica"
-        bt.fontSize = 8
-        bt.leading = bt.fontSize * 1.25
-
         # replace images with resized ones fitting into the available width
         W, H = (
             self.width - self.lm - self.rm), self.height - self.tm - self.bm
@@ -147,13 +141,6 @@ class QuizCard(Card):
                 story[i] = Paragraph(el, bt)  # Spacer(0, 0)
 
     def fits(self, flowables):
-        # TODO: make more configurable
-        styleSheet = getSampleStyleSheet()
-        bt = styleSheet['BodyText']
-        bt.fontName = "Helvetica"
-        bt.fontSize = 8
-        bt.leading = bt.fontSize * 1.25
-
         story = flowables
         self.resize_images(story)
 
@@ -171,13 +158,6 @@ class QuizCard(Card):
         self.canv.saveState()
 
         XP, YP = self.xp, self.yp
-
-        styleSheet = getSampleStyleSheet()
-        bt = styleSheet['BodyText']
-        bt.fontName = "Helvetica"
-        bt.fontSize = 8
-        bt.leading = bt.fontSize * 1.25
-
         self.resize_images(self.text)
         story = self.text
         W, H = (self.width - self.lm - self.rm), self.yp - self.y0 - self.bm
@@ -186,7 +166,6 @@ class QuizCard(Card):
         w, h = frame.wrapOn(self.canv, W, H)
         frame.drawOn(self.canv, self.xp, self.yp - h)
         self.addSpace(0, -h - 5 * mm)
-
         self.canv.restoreState()
 
 
