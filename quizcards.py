@@ -23,10 +23,14 @@ from reportlab.lib.units import mm, cm
 from reportlab.lib.pagesizes import A3, A4, A5, A6, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pygments2xpre import pygments2xpre
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Paragraph, XPreformatted
 from reportlab.platypus.flowables import Image, Spacer, KeepInFrame
 
+
+# Text Styling 
 
 styleSheet = getSampleStyleSheet()
 h1 = styleSheet['Title']
@@ -37,6 +41,19 @@ bt.fontSize = 14
 bt.leading = bt.fontSize * 1.25
 code = styleSheet['Code']
 code.leftIndent = 0
+# Pick a free condensed monospace font for code
+ttf = None
+ttf_name = 'nk57-monospace-cd-sb.ttf'
+if os.path.exists(ttf_name):
+    ttf = TTFont('Monospace-Condensed-Semibold', ttf_name)
+    pdfmetrics.registerFont(ttf)
+    # c.setFont('Monospace-Condensed-Semibold', 36)
+    code.fontName = 'Monospace-Condensed-Semibold'
+    code.fontSize = 10
+    code.leading = code.fontSize * 1.25
+else:
+    print('Font %s not found, using normal Courier.' % ttf_name)
+    print('See http://www.dafont.com/nk57-monospace.font')
 
 
 # Utils
