@@ -22,8 +22,9 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm, cm
 from reportlab.lib.pagesizes import A3, A4, A5, A6, landscape
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pygments2xpre import pygments2xpre
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import Paragraph, Preformatted
+from reportlab.platypus import Paragraph, XPreformatted
 from reportlab.platypus.flowables import Image, Spacer, KeepInFrame
 
 
@@ -303,7 +304,7 @@ def markdown_to_platypus(path):
     title, paras = cover
     cover = [Paragraph(title, h1)] + [Paragraph(p, bt) for p in paras]
     items = [{"q": Paragraph(q, bt), 
-              "a": Preformatted(a, code)} for q, a in qa]
+              "a": XPreformatted(pygments2xpre(a), code)} for q, a in qa]
     return cover, items
 
 
