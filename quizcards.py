@@ -6,6 +6,9 @@ This generates double-sided quiz cards based on a MarkDown file.
 Dependencies:
 
     - pip install reportlab
+    - DejaVuSansCondensed.ttf (if present else Helvetica)
+    - DejaVuSansCondensed-Bold.ttf (if present else Helvetica-Bold)
+    - nk57-monospace-cd-sb.ttf (if present else Courier)
 
 Usage:
 
@@ -15,6 +18,7 @@ Usage:
 import re
 import io
 import sys
+import copy
 import os.path
 import argparse
 
@@ -32,28 +36,63 @@ from reportlab.platypus.flowables import Image, Spacer, KeepInFrame
 
 # Text Styling 
 
+def register_fonts():
+    "Register optional fonts for better rendering."
+
+    registered_fonts = {
+        'DejaVu-Sans-Condensed': {
+            'default': 'Helvetica',
+            'registered': False,
+            'path': 'DejaVuSansCondensed.ttf',
+            'link': 'https://github.com/dejavu-fonts/dejavu-fonts'},
+        'DejaVu-Sans-Condensed-Bold': {
+            'default': 'Helvetica-Bold',
+            'registered': False,
+            'path': 'DejaVuSansCondensed-Bold.ttf',
+            'link': 'https://github.com/dejavu-fonts/dejavu-fonts'},
+        'Monospace-Condensed-Semibold': {
+            'default': 'Courier',
+            'registered': False,
+            'path': 'nk57-monospace-cd-sb.ttf',
+            'link': 'http://www.dafont.com/nk57-monospace.font'},
+    }
+    for name in registered_fonts:
+        f = registered_fonts
+        default, path, link = f[name]['default'], f[name]['path'], f[name]['link']
+        if os.path.exists(path):
+            font = TTFont(name, path)
+            pdfmetrics.registerFont(font)
+            registered_fonts[name]['registered'] = True
+        else:
+            print('Font %s not found, using %s.' % (name, default))
+            print('See %s' % link)
+    return registered_fonts
+
+
+rf = register_fonts()
+
 styleSheet = getSampleStyleSheet()
+
 h1 = styleSheet['Title']
-h5 = styleSheet['Heading3']
+name = 'DejaVu-Sans-Condensed-Bold'
+h1.fontName = name if rf[name]['registered'] else rf[name]['default']
+
 bt = styleSheet['BodyText']
-bt.fontName = "Helvetica"
+name = 'DejaVu-Sans-Condensed'
+bt.fontName = name if rf[name]['registered'] else rf[name]['default']
 bt.fontSize = 14
 bt.leading = bt.fontSize * 1.25
+
+fine = copy.deepcopy(bt)
+fine.fontSize = 10
+fine.leading = fine.fontSize * 1.25
+
 code = styleSheet['Code']
+name = 'Monospace-Condensed-Semibold'
+code.fontName = name if rf[name]['registered'] else rf[name]['default']
 code.leftIndent = 0
-# Pick a free condensed monospace font for code
-ttf = None
-ttf_name = 'nk57-monospace-cd-sb.ttf'
-if os.path.exists(ttf_name):
-    ttf = TTFont('Monospace-Condensed-Semibold', ttf_name)
-    pdfmetrics.registerFont(ttf)
-    # c.setFont('Monospace-Condensed-Semibold', 36)
-    code.fontName = 'Monospace-Condensed-Semibold'
-    code.fontSize = 10
-    code.leading = code.fontSize * 1.25
-else:
-    print('Font %s not found, using normal Courier.' % ttf_name)
-    print('See http://www.dafont.com/nk57-monospace.font')
+code.fontSize = 10
+code.leading = fine.fontSize * 1.25
 
 
 # Utils
@@ -87,7 +126,7 @@ class Card(object):
 
     lm, rm = 3 * mm, 3 * mm  # left/right margin
     tm, bm = 3 * mm, 3 * mm  # top/bottom margin
-    fn, fs = "Helvetica", 10
+    fn, fs = bt, 10
 
     def __init__(self, frame=False, debug=False, **dikt):
         # set received vars as instance variables
@@ -223,7 +262,7 @@ def maximize_cards_on_page(cardSize, pageSize, margins=None, autoRotate=False):
 def add_size_info_label(canv, x, y, pageSize, cardSize):
     "Put info label about used sizes on a page."
 
-    canv.setFont("Helvetica", 8)
+    canv.setFont(bt.fontName, 8)
     args = (pageSize + cardSize)
     args = tuple([a / mm for a in args])
     desc = "paper: %3.0f x %3.0f mm, cards: %3.0f x %3.0f mm" % args
@@ -294,15 +333,18 @@ def extract_markdown(path):
     title = m_title.groups()[0]
     m_q1 = re.search('#### +(.*)', content)
     paras = content[m_title.end():m_q1.start()].strip().split('\n')
+    repl = lambda m: '<a href="%s" color="blue">%s</a>' % (m.groups()[0], m.groups()[0])
     paras = [p for p in paras if p]
+    paras = [re.sub('\<(.*?)\>', repl, p) for p in paras]
     cover = (title, paras)
 
     # remove MarkDown escapes
     for ch in "[]*":
         content = content.replace('\\' + ch, ch)
 
-    # replace stars
-    content = re.sub('(★+☆*)', lambda m: '*'*m.group().count('★'), content)
+    # replace stars if using Helvetica (not needed for DejaVu-Sans)
+    if bt.fontName.startswith('Helvetica'):
+        content = re.sub('(★+☆*)', lambda m: '*'*m.group().count('★'), content)
 
     # build question/aswer tuples
     q_pat = '#### +(\d+\. +.*)'
@@ -352,8 +394,8 @@ def make_cards_platypus(cardSize, cover, items, verbose=False):
         q_side.text = questions
         a_side.text = answers
         yield q_side, a_side
-        questions = [Paragraph("Question:", h5)] + [q]
-        answers = [Paragraph("Answer %d:<br/><br/>" % (i + 1), h5)] + [a]
+        questions = [Paragraph("Question:", fine)] + [q]
+        answers = [Paragraph("Answer %d:<br/><br/>" % (i + 1), fine)] + [a]
         q_side = QuizCard(**kwDict)
         a_side = QuizCard(**kwDict)
 
